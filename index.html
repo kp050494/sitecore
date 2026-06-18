@@ -298,6 +298,7 @@
       </div>
       <div class="editor-actions">
         <button class="btn btn-ghost" onclick="resetCode()">↺ Reset</button>
+        <button class="btn btn-ghost" onclick="viewSolution()" id="btn-solution" style="color:var(--amber);border-color:var(--amber-dim)">💡 View Solution</button>
         <button class="btn btn-cyan" onclick="runTests()">▶ Run Tests</button>
       </div>
     </div>
@@ -828,6 +829,234 @@ function updateTotalScore() {
   const total = Object.values(scores).reduce((a, b) => a + b, 0);
   document.getElementById('total-score-val').textContent = total;
   document.getElementById('progress-bar').style.width = (total / 300 * 100) + '%';
+}
+
+// ─── SOLUTIONS ───────────────────────────────────────────────────────────────
+const SOLUTIONS = {
+  1: `// ✅ MODEL SOLUTION — Hero Banner Component
+
+function HeroBanner({ title, description, ctaText }) {
+  return (
+    <div className="hero-banner">
+      <h1>{title}</h1>
+      <p>{description}</p>
+      <button>{ctaText}</button>
+    </div>
+  );
+}
+
+// Why this works:
+// • className="hero-banner" on the root div — matches the test requirement
+// • <h1> renders the title prop directly
+// • <p> renders the description prop
+// • <button> renders ctaText
+// In a real Sitecore XM Cloud project, these props would come from
+// Sitecore field data via the JSS SDK Field helpers.`,
+
+  2: `/* ✅ MODEL SOLUTION — Card Grid Layout */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.card {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 600px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/*
+  Why this works:
+  • display: grid sets the container to CSS Grid
+  • repeat(3, 1fr) creates exactly 3 equal-width columns
+  • border-radius: 8px satisfies the card rounding requirement
+  • The media query collapses to 1 column on mobile (≤600px)
+  In Sitecore XM Cloud, this CSS ships with your rendering component.
+*/`,
+
+  3: `// ✅ MODEL SOLUTION — Content Filter Function
+
+function filterContent(items, query, category) {
+  return items.filter(item => {
+    // Case-insensitive title search
+    const matchesQuery = item.title
+      .toLowerCase()
+      .includes(query.toLowerCase());
+
+    // Skip category filter if "all" is selected
+    const matchesCategory =
+      category === "all" || item.category === category;
+
+    return matchesQuery && matchesCategory;
+  });
+}
+
+// Why this works:
+// • Array.filter() iterates every item and keeps those that pass both checks
+// • .toLowerCase().includes() gives case-insensitive search
+// • category === "all" short-circuits so all categories pass when unfiltered
+// • Both conditions combined with && means BOTH must be true
+//
+// Usage example:
+// filterContent(articles, "react", "all")   → all React articles
+// filterContent(articles, "", "CSS")         → all CSS articles
+// filterContent(articles, "hooks", "React")  → React articles with "hooks" in title`,
+
+  4: `// ✅ MODEL SOLUTION — Accordion Component
+
+function Accordion({ items }) {
+  const [openIndex, setOpenIndex] = React.useState(null);
+
+  const handleToggle = (index) => {
+    // If clicking the already-open item, close it; otherwise open the new one
+    setOpenIndex(openIndex === index ? null : index);
+  };
+
+  return (
+    <div className="accordion">
+      {items.map((item, index) => (
+        <div key={index} className="accordion-item">
+          <div
+            className="accordion-question"
+            onClick={() => handleToggle(index)}
+          >
+            <span>{item.question}</span>
+            <span className="indicator">
+              {openIndex === index ? "-" : "+"}
+            </span>
+          </div>
+          {openIndex === index && (
+            <div className="accordion-answer">
+              {item.answer}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Why this works:
+// • useState(null) — null means nothing is open initially
+// • handleToggle compares current open index; clicking same item closes it
+// • Conditional render {openIndex === index && ...} shows only active answer
+// • The + / - indicator gives clear visual feedback
+// This is the exact pattern used in Sitecore JSS FAQ components.`,
+
+  5: `// ✅ MODEL SOLUTION — Date Formatter Utility
+
+function formatDate(dateStr, format) {
+  const date = new Date(dateStr);
+
+  // Guard: check for invalid date
+  if (isNaN(date.getTime())) {
+    return "Invalid date";
+  }
+
+  if (format === "short") {
+    // "Jan 5, 2024"
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(date);
+  }
+
+  if (format === "long") {
+    // "5 January 2024"
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(date);
+  }
+
+  if (format === "iso") {
+    // "2024-01-05"
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return \`\${y}-\${m}-\${d}\`;
+  }
+
+  return "Unknown format";
+}
+
+// Why this works:
+// • new Date(dateStr) parses ISO strings and many common formats
+// • isNaN(date.getTime()) reliably detects invalid dates
+// • Intl.DateTimeFormat is the modern, locale-aware way to format dates
+// • "en-US" gives "Jan 5, 2024"; "en-GB" gives "5 January 2024"
+// • ISO format uses padStart to ensure 2-digit month and day (e.g. "01" not "1")
+//
+// Test it:
+// formatDate("2024-01-05", "short")  → "Jan 5, 2024"
+// formatDate("2024-01-05", "long")   → "5 January 2024"
+// formatDate("2024-01-05", "iso")    → "2024-01-05"
+// formatDate("not-a-date", "short")  → "Invalid date"`,
+
+  6: `// ✅ MODEL SOLUTION — Navigation Menu Component
+
+function NavigationMenu({ brandName, links }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <nav className={isOpen ? "open" : ""}>
+      <div className="nav-brand">{brandName}</div>
+
+      <ul className="nav-links">
+        {links.map((link, index) => (
+          <li key={index}>
+            <a href={link.href}>{link.label}</a>
+          </li>
+        ))}
+      </ul>
+
+      <button
+        className="menu-toggle"
+        onClick={toggleMenu}
+        aria-label="Toggle navigation menu"
+        aria-expanded={isOpen}
+      >
+        {isOpen ? "✕" : "☰"}
+      </button>
+    </nav>
+  );
+}
+
+// Why this works:
+// • useState(false) — menu starts closed on mobile
+// • className={isOpen ? "open" : ""} — adds "open" class to <nav> when active
+//   Your CSS uses nav.open ul { display: block } to reveal mobile menu
+// • links.map() renders each { label, href } as an <li><a> pair
+// • className="menu-toggle" on the button — required by the test and Sitecore boilerplate
+// • aria-label + aria-expanded — accessibility best practice for nav toggles
+// This is the exact pattern in the Sitecore XM Cloud JSS starter kit.`
+};
+
+// ─── VIEW SOLUTION ────────────────────────────────────────────────────────────
+function viewSolution() {
+  if (!currentChallenge) {
+    alert('Please select a challenge first.');
+    return;
+  }
+  const solution = SOLUTIONS[currentChallenge.id];
+  if (!solution) return;
+  if (!confirm('Load the model solution? This will replace your current code.\n\nTip: Try running tests on it to see a perfect score!')) return;
+  editor.setValue(solution);
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
