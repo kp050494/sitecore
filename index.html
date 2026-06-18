@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sitecore Dev Assessment Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #21262d;
+    --bg4: #2d333b;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #6e7681;
+    --cyan: #39d0c8;
+    --cyan-dim: #1a4a48;
+    --green: #3fb950;
+    --green-dim: #1a3a22;
+    --red: #f85149;
+    --red-dim: #3a1a1a;
+    --amber: #e3b341;
+    --amber-dim: #3a2e10;
+    --purple: #a371f7;
+    --purple-dim: #2d1f5e;
+    --blue: #58a6ff;
+    --font-ui: 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-ui); font-size: 14px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; height: 52px; background: var(--bg2);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 28px; height: 28px; background: var(--cyan); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; font-weight: 700;
+    font-size: 13px; color: #0d1117; letter-spacing: -0.5px;
+  }
+  .logo-text { font-weight: 600; font-size: 15px; }
+  .logo-sub { color: var(--text2); font-size: 12px; margin-left: 4px; }
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+  .candidate-badge {
+    display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+    font-size: 12px; color: var(--text2);
+  }
+  .candidate-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .total-score {
+    display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
+    color: var(--cyan);
+  }
+  .total-score span { color: var(--text2); font-weight: 400; font-size: 12px; }
+
+  /* MAIN LAYOUT */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 280px; flex-shrink: 0; background: var(--bg2);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.8px; color: var(--text3);
+  }
+  .challenge-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .challenge-list::-webkit-scrollbar { width: 4px; }
+  .challenge-list::-webkit-scrollbar-track { background: transparent; }
+  .challenge-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .challenge-item {
+    padding: 10px 16px; cursor: pointer; border-left: 3px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .challenge-item:hover { background: var(--bg3); }
+  .challenge-item.active { background: var(--bg3); border-left-color: var(--cyan); }
+  .challenge-item.solved { border-left-color: var(--green); }
+  .ch-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .ch-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .ch-badges { display: flex; gap: 5px; align-items: center; }
+  .badge {
+    font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 3px;
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .badge-easy { background: var(--green-dim); color: var(--green); }
+  .badge-medium { background: var(--amber-dim); color: var(--amber); }
+  .badge-hard { background: var(--red-dim); color: var(--red); }
+  .badge-cat { background: var(--purple-dim); color: var(--purple); }
+  .ch-meta { font-size: 11px; color: var(--text3); }
+  .ch-score-pill {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 600; padding: 1px 6px;
+    border-radius: 10px; background: var(--green-dim); color: var(--green);
+    margin-left: 6px;
+  }
+
+  /* EDITOR AREA */
+  .editor-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .editor-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; height: 44px; background: var(--bg2);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .challenge-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .editor-actions { display: flex; gap: 8px; }
+  .btn {
+    padding: 6px 14px; border-radius: 5px; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; font-family: var(--font-ui);
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:active { transform: scale(0.97); }
+  .btn-ghost { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+  .btn-cyan { background: var(--cyan); color: #0d1117; }
+  .btn-green { background: var(--green); color: #0d1117; }
+
+  /* SPLIT PANE */
+  .split-pane { flex: 1; display: flex; overflow: hidden; }
+  .editor-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .editor-tabs {
+    display: flex; align-items: center; background: var(--bg2);
+    border-bottom: 1px solid var(--border); padding: 0 4px; flex-shrink: 0;
+  }
+  .tab {
+    padding: 8px 14px; font-size: 12px; cursor: pointer; color: var(--text2);
+    border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .tab.active { color: var(--text); border-bottom-color: var(--cyan); }
+  .tab:hover:not(.active) { color: var(--text); }
+  #monaco-container { flex: 1; overflow: hidden; }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    width: 380px; flex-shrink: 0; background: var(--bg2);
+    border-left: 1px solid var(--border); display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-tabs {
+    display: flex; background: var(--bg2);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .panel-tab {
+    padding: 10px 16px; font-size: 12px; cursor: pointer; color: var(--text2);
+    border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+  }
+  .panel-tab.active { color: var(--text); border-bottom-color: var(--cyan); }
+  .panel-tab:hover:not(.active) { color: var(--text); }
+  .panel-body { flex: 1; overflow-y: auto; padding: 16px; }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* BRIEF */
+  .brief-section { margin-bottom: 20px; }
+  .brief-label { font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.7px; color: var(--text3); margin-bottom: 8px; }
+  .brief-text { font-size: 13px; line-height: 1.7; color: var(--text2); }
+  .brief-text strong { color: var(--text); }
+  .brief-task {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px 14px; font-size: 13px; line-height: 1.7; color: var(--text2);
+  }
+  .brief-task ul { padding-left: 16px; margin-top: 6px; }
+  .brief-task li { margin-bottom: 4px; }
+  .hint-box {
+    background: var(--cyan-dim); border: 1px solid var(--cyan); border-radius: 6px;
+    padding: 10px 12px; font-size: 12px; color: var(--cyan); line-height: 1.6;
+    margin-top: 12px;
+  }
+
+  /* TEST RESULTS */
+  .run-status {
+    display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+    background: var(--bg3); border-radius: 8px; margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+  .run-status.running { border-color: var(--cyan); }
+  .run-status.passed { border-color: var(--green); background: var(--green-dim); }
+  .run-status.failed { border-color: var(--red); background: var(--red-dim); }
+  .status-icon { font-size: 18px; }
+  .status-text { flex: 1; }
+  .status-title { font-size: 13px; font-weight: 600; }
+  .status-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .score-circle {
+    width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--green);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: var(--green); line-height: 1;
+  }
+  .score-circle small { font-size: 9px; font-weight: 400; color: var(--text3); }
+  .score-circle.fail { border-color: var(--red); color: var(--red); }
+
+  .test-case {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+    margin-bottom: 8px; overflow: hidden;
+  }
+  .test-header {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+    cursor: pointer; user-select: none;
+  }
+  .test-header:hover { background: var(--bg4); }
+  .test-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-pass { background: var(--green); }
+  .dot-fail { background: var(--red); }
+  .dot-pending { background: var(--text3); }
+  .test-name { flex: 1; font-size: 12px; font-weight: 500; }
+  .test-pts { font-size: 11px; color: var(--text3); }
+  .test-body {
+    padding: 0 12px 12px; font-size: 11px; font-family: var(--font-mono);
+    color: var(--text2); line-height: 1.6; display: none;
+    border-top: 1px solid var(--border); padding-top: 10px; margin-top: 0;
+  }
+  .test-body.open { display: block; }
+  .test-error { color: var(--red); }
+  .test-ok { color: var(--green); }
+
+  /* PREVIEW */
+  #preview-frame {
+    width: 100%; flex: 1; border: none; background: white;
+  }
+  .preview-wrapper { display: flex; flex-direction: column; height: 100%; }
+  .preview-bar {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    background: var(--bg3); border-bottom: 1px solid var(--border);
+    font-size: 11px; color: var(--text3); flex-shrink: 0;
+  }
+  .preview-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* EMPTY STATE */
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text3); }
+  .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-state p { font-size: 13px; line-height: 1.6; }
+
+  /* PROGRESS BAR */
+  .progress-bar-wrap { height: 3px; background: var(--border); }
+  .progress-bar-fill { height: 3px; background: var(--cyan); transition: width 0.4s; }
+
+  /* CATEGORY HEADER */
+  .cat-header {
+    padding: 8px 16px 4px; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px; color: var(--text3);
+    margin-top: 6px;
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">SC</div>
+    <div>
+      <span class="logo-text">Sitecore Assessment</span>
+      <span class="logo-sub">XM Cloud · Developer Challenge</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="candidate-badge">
+      <div class="candidate-dot"></div>
+      <span>Candidate Session Active</span>
+    </div>
+    <div class="total-score">
+      <span id="total-score-val">0</span> / 300 pts <span>total</span>
+    </div>
+  </div>
+</div>
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar-wrap">
+  <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">Challenges (6)</div>
+    <div class="challenge-list" id="challenge-list"></div>
+  </div>
+
+  <!-- EDITOR AREA -->
+  <div class="editor-area">
+    <div class="editor-topbar">
+      <div class="challenge-title" id="editor-title">
+        <span style="color:var(--text3)">←</span> Select a challenge
+      </div>
+      <div class="editor-actions">
+        <button class="btn btn-ghost" onclick="resetCode()">↺ Reset</button>
+        <button class="btn btn-cyan" onclick="runTests()">▶ Run Tests</button>
+      </div>
+    </div>
+    <div class="split-pane">
+      <div class="editor-pane">
+        <div class="editor-tabs">
+          <div class="tab active">solution.jsx</div>
+        </div>
+        <div id="monaco-container"></div>
+      </div>
+      <div class="right-panel">
+        <div class="panel-tabs">
+          <div class="panel-tab active" onclick="switchPanel('brief', this)">Brief</div>
+          <div class="panel-tab" onclick="switchPanel('tests', this)">Test Results</div>
+          <div class="panel-tab" onclick="switchPanel('preview', this)">Preview</div>
+        </div>
+        <div class="panel-body" id="panel-brief">
+          <div class="empty-state">
+            <div class="icon">📋</div>
+            <p>Select a challenge from the sidebar to see its brief and start coding.</p>
+          </div>
+        </div>
+        <div class="panel-body hidden" id="panel-tests">
+          <div class="empty-state">
+            <div class="icon">🧪</div>
+            <p>Click <strong style="color:var(--cyan)">▶ Run Tests</strong> to evaluate your solution.</p>
+          </div>
+        </div>
+        <div class="preview-wrapper hidden" id="panel-preview">
+          <div class="preview-bar">
+            <div class="preview-dot" style="background:#f85149"></div>
+            <div class="preview-dot" style="background:#e3b341"></div>
+            <div class="preview-dot" style="background:#3fb950"></div>
+            <span style="margin-left:6px;">Live Preview</span>
+          </div>
+          <iframe id="preview-frame" sandbox="allow-scripts"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CHALLENGES DATA ──────────────────────────────────────────────────────────
+const CHALLENGES = [
+  {
+    id: 1, category: 'React Component',
+    name: 'Hero Banner Component',
+    difficulty: 'easy', points: 50,
+    brief: `Build a <strong>Hero Banner</strong> component for a Sitecore XM Cloud page. This is one of the most common components you'll build in real projects.`,
+    tasks: [
+      'Render an <code>&lt;h1&gt;</code> with the <code>title</code> prop',
+      'Render a <code>&lt;p&gt;</code> with the <code>description</code> prop',
+      'Render a button with the <code>ctaText</code> prop',
+      'Apply a <code>className</code> of <code>"hero-banner"</code> to the root div',
+    ],
+    hint: 'Sitecore components receive field data as props. Keep it clean and semantic — accessibility matters in enterprise CMS.',
+    starter: `// Hero Banner Component
+// Props: { title, description, ctaText }
+// Complete the component below
+
+function HeroBanner({ title, description, ctaText }) {
+  // Write your JSX here
+  return (
+    <div>
+      {/* Your code here */}
+    </div>
+  );
+}`,
+    tests: [
+      { name: 'Renders an h1 with the title prop', points: 12, fn: (code) => {
+        return code.includes('<h1') && code.includes('title') && !code.includes('{/* Your code here */}');
+      }, msg: 'Expected <h1> element containing the title prop value.' },
+      { name: 'Renders a paragraph with description', points: 12, fn: (code) => {
+        return code.includes('<p') && code.includes('description');
+      }, msg: 'Expected <p> element containing the description prop.' },
+      { name: 'Renders a button with ctaText', points: 12, fn: (code) => {
+        return (code.includes('<button') || code.includes('<a')) && code.includes('ctaText');
+      }, msg: 'Expected a <button> or <a> element with ctaText.' },
+      { name: 'Root div has className "hero-banner"', points: 14, fn: (code) => {
+        return code.includes('"hero-banner"') || code.includes("'hero-banner'");
+      }, msg: 'Root element should have className="hero-banner".' },
+    ],
+    preview: (code) => `
+      <style>body{font-family:sans-serif;padding:32px;background:#f5f7fa;} .hero-banner{background:linear-gradient(135deg,#1a1a2e,#16213e);color:white;padding:60px 40px;border-radius:12px;text-align:center;} h1{font-size:2.4em;margin-bottom:16px;} p{opacity:0.8;font-size:1.1em;margin-bottom:28px;} button,a{background:#39d0c8;color:#0d1117;border:none;padding:12px 28px;border-radius:6px;font-size:1em;font-weight:700;cursor:pointer;text-decoration:none;}</style>
+      <div class="hero-banner">
+        <h1>Welcome to Our Platform</h1>
+        <p>This is your hero description text. Clear, concise, and compelling.</p>
+        <button>Get Started</button>
+      </div>`
+  },
+  {
+    id: 2, category: 'CSS Layout',
+    name: 'Card Grid Layout',
+    difficulty: 'easy', points: 50,
+    brief: `Create a <strong>responsive card grid</strong> using CSS. In Sitecore projects, card grids are used everywhere — for products, articles, team members, and more.`,
+    tasks: [
+      'Create a <code>.card-grid</code> container using CSS Grid',
+      'Show <strong>3 columns</strong> on desktop, <strong>1 column</strong> on mobile (max-width: 600px)',
+      'Each <code>.card</code> should have a <code>border-radius</code> of <code>8px</code> and a box-shadow',
+      'Cards should have <code>padding: 24px</code> and a white background',
+    ],
+    hint: 'Use grid-template-columns with repeat() and auto-fill or fixed columns. Media queries handle the responsive switch.',
+    starter: `/* Card Grid Layout
+   Selector requirements: .card-grid and .card
+   Add your CSS below — write complete style rules */
+
+.card-grid {
+  /* Your grid CSS here */
+}
+
+.card {
+  /* Your card CSS here */
+}
+
+@media (max-width: 600px) {
+  .card-grid {
+    /* Mobile layout */
+  }
+}`,
+    tests: [
+      { name: 'card-grid uses CSS Grid display', points: 12, fn: (code) => code.includes('display') && code.includes('grid'), msg: 'Expected display: grid on .card-grid.' },
+      { name: 'Three column layout defined', points: 12, fn: (code) => code.includes('repeat') || (code.includes('grid-template-columns') && code.match(/1fr.*1fr.*1fr|33%|3 /)), msg: 'Expected a 3-column grid definition.' },
+      { name: 'Media query targets max-width: 600px', points: 13, fn: (code) => code.includes('max-width') && code.includes('600'), msg: 'Expected @media (max-width: 600px) breakpoint.' },
+      { name: 'card has border-radius: 8px', points: 13, fn: (code) => code.includes('border-radius') && code.includes('8px'), msg: 'Expected border-radius: 8px on .card.' },
+    ],
+    preview: () => `
+      <style>body{font-family:sans-serif;padding:20px;background:#f0f2f5;}
+      .card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+      .card{background:white;padding:24px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+      .card h3{margin-bottom:8px;color:#1a1a2e;} .card p{color:#666;font-size:0.9em;line-height:1.5;}
+      @media(max-width:600px){.card-grid{grid-template-columns:1fr;}}</style>
+      <div class="card-grid">
+        <div class="card"><h3>Article One</h3><p>Sitecore content displayed in a card layout component.</p></div>
+        <div class="card"><h3>Article Two</h3><p>Each card is fully responsive and auto-sizes with the grid.</p></div>
+        <div class="card"><h3>Article Three</h3><p>This pattern is used throughout Sitecore XM Cloud projects.</p></div>
+      </div>`
+  },
+  {
+    id: 3, category: 'JavaScript Logic',
+    name: 'Content Filter Function',
+    difficulty: 'medium', points: 50,
+    brief: `Write a <strong>content filtering function</strong> — a very common need in Sitecore frontends where you display lists of articles, events, or products with search and category filters.`,
+    tasks: [
+      'Write a function <code>filterContent(items, query, category)</code>',
+      'Filter by <code>query</code>: match against item\'s <code>title</code> (case-insensitive)',
+      'Filter by <code>category</code>: match item\'s <code>category</code> field (skip filter if category is <code>"all"</code>)',
+      'Return the filtered array',
+    ],
+    hint: 'Use Array.filter() with String.toLowerCase() for case-insensitive search. Chain both conditions with &&.',
+    starter: `// Content Filter Function
+// items: [{ title, category, date }]
+// query: string to search in title
+// category: category name or "all" to skip category filter
+
+function filterContent(items, query, category) {
+  // Write your filtering logic here
+}`,
+    tests: [
+      { name: 'Function exists and is callable', points: 8, fn: (code) => code.includes('function filterContent') || code.includes('filterContent ='), msg: 'Expected a function named filterContent.' },
+      { name: 'Returns filtered results by title query', points: 15, fn: (code) => code.includes('filter') && code.includes('title') && (code.includes('toLowerCase') || code.includes('includes')), msg: 'Expected Array.filter() checking item.title with case-insensitive match.' },
+      { name: 'Handles category filter correctly', points: 14, fn: (code) => code.includes('category') && code.includes('"all"') || code.includes("'all'") || (code.includes('category') && code.includes('===')), msg: 'Expected category filter that skips when category is "all".' },
+      { name: 'Returns an array (uses return)', points: 13, fn: (code) => code.includes('return') && code.includes('filter'), msg: 'Function must return the filtered array.' },
+    ],
+    preview: () => `
+      <style>body{font-family:sans-serif;padding:20px;background:#f0f2f5;}
+      input,select{padding:8px 12px;border:1px solid #ddd;border-radius:6px;margin-right:10px;font-size:0.9em;}
+      .controls{margin-bottom:20px;} .item{background:white;padding:16px;border-radius:8px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+      .item h4{margin-bottom:4px;color:#1a1a2e;} .tag{display:inline-block;background:#e8f5ff;color:#0066cc;font-size:0.75em;padding:2px 8px;border-radius:10px;}</style>
+      <div class="controls"><input placeholder="Search title..." oninput="applyFilter()"><select onchange="applyFilter()"><option value="all">All categories</option><option>React</option><option>CSS</option><option>JavaScript</option></select></div>
+      <div id="list"></div>
+      <script>
+      const data=[{title:"React Hooks Deep Dive",category:"React"},{title:"CSS Grid Mastery",category:"CSS"},{title:"JavaScript Closures",category:"JavaScript"},{title:"React Performance Tips",category:"React"}];
+      function applyFilter(){const q=document.querySelector('input').value.toLowerCase();const c=document.querySelector('select').value;const r=data.filter(i=>(c==='all'||i.category===c)&&i.title.toLowerCase().includes(q));document.getElementById('list').innerHTML=r.map(i=>'<div class="item"><h4>'+i.title+'</h4><span class="tag">'+i.category+'</span></div>').join('')||'<p style="color:#999">No results found.</p>';}
+      applyFilter();
+      <\/script>`
+  },
+  {
+    id: 4, category: 'React Component',
+    name: 'Accordion Component',
+    difficulty: 'medium', points: 50,
+    brief: `Build a <strong>reusable Accordion component</strong>. Accordions are heavily used in Sitecore XM Cloud projects for FAQs, product specs, and content sections. This tests your React state management.`,
+    tasks: [
+      'Accept a prop <code>items</code> — array of <code>{ question, answer }</code> objects',
+      'Each item should be expandable/collapsible on click',
+      'Only one item should be open at a time (clicking another closes the previous)',
+      'Show a visual indicator (+ / -) for open/closed state',
+    ],
+    hint: 'Use useState to track the currently open index. Set to null when closing. Compare index in the onClick handler.',
+    starter: `// Accordion Component
+// Props: { items: [{ question: string, answer: string }] }
+// Manages its own open/close state
+
+function Accordion({ items }) {
+  // Add state to track which item is open
+
+  return (
+    <div className="accordion">
+      {items.map((item, index) => (
+        <div key={index} className="accordion-item">
+          {/* Render question and answer */}
+        </div>
+      ))}
+    </div>
+  );
+}`,
+    tests: [
+      { name: 'Component maps over items array', points: 10, fn: (code) => code.includes('.map') && code.includes('item') && code.includes('index'), msg: 'Expected items.map() to render each item.' },
+      { name: 'Uses React useState hook', points: 15, fn: (code) => code.includes('useState'), msg: 'Expected useState hook for managing open/closed state.' },
+      { name: 'Has click handler on question', points: 12, fn: (code) => code.includes('onClick') || code.includes('onclick'), msg: 'Expected an onClick handler on the question element.' },
+      { name: 'Shows open/close indicator (+ / -)', points: 13, fn: (code) => (code.includes('+') && code.includes('-')) || code.includes('indicator') || code.includes('toggle'), msg: 'Expected a visual + / - indicator for open/closed state.' },
+    ],
+    preview: () => `
+      <style>body{font-family:sans-serif;padding:20px;background:#f0f2f5;} .accordion{max-width:600px;}
+      .ai{background:white;border-radius:8px;margin-bottom:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+      .aq{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;cursor:pointer;font-weight:600;color:#1a1a2e;user-select:none;}
+      .aq:hover{background:#f8f9fa;} .aa{padding:0 20px 16px;color:#555;line-height:1.6;font-size:0.9em;} .ind{font-size:1.3em;color:#39d0c8;}</style>
+      <div class="accordion" id="acc"></div>
+      <script>
+      const items=[{question:"What is Sitecore XM Cloud?",answer:"Sitecore XM Cloud is a cloud-native CMS platform that separates content management from presentation."},{question:"What is a Rendering Host?",answer:"A Rendering Host is the application responsible for rendering content delivered by Sitecore, typically a Next.js app."},{question:"What is the Sitecore JSS SDK?",answer:"JSS (JavaScript Services) is the SDK that allows developers to build Sitecore applications using modern JavaScript frameworks like React."}];
+      let open=null;
+      function render(){document.getElementById('acc').innerHTML=items.map((it,i)=>'<div class="ai"><div class="aq" onclick="toggle('+i+')"><span>'+it.question+'</span><span class="ind">'+(open===i?'-':'+')+'</span></div>'+(open===i?'<div class="aa">'+it.answer+'</div>':'')+'</div>').join('');}
+      function toggle(i){open=open===i?null:i;render();}render();
+      <\/script>`
+  },
+  {
+    id: 5, category: 'JavaScript Logic',
+    name: 'Date Formatter Utility',
+    difficulty: 'hard', points: 50,
+    brief: `Build a <strong>date formatting utility</strong> for a Sitecore content site. Date formatting is critical when displaying publish dates, event dates, and content timestamps from the Sitecore content tree.`,
+    tasks: [
+      'Write <code>formatDate(dateStr, format)</code> function',
+      'Support format <code>"short"</code>: output <code>"Jan 5, 2024"</code>',
+      'Support format <code>"long"</code>: output <code>"5 January 2024"</code>',
+      'Support format <code>"iso"</code>: output <code>"2024-01-05"</code>',
+      'Handle invalid dates by returning <code>"Invalid date"</code>',
+    ],
+    hint: 'Use the built-in Date object and Intl.DateTimeFormat for locale-aware formatting. Check for NaN after new Date() to detect invalid inputs.',
+    starter: `// Date Formatter Utility
+// formatDate("2024-01-05", "short")  → "Jan 5, 2024"
+// formatDate("2024-01-05", "long")   → "5 January 2024"
+// formatDate("2024-01-05", "iso")    → "2024-01-05"
+// formatDate("invalid", "short")     → "Invalid date"
+
+function formatDate(dateStr, format) {
+  // Write your implementation here
+}`,
+    tests: [
+      { name: 'Function is defined', points: 5, fn: (code) => code.includes('function formatDate') || code.includes('formatDate ='), msg: 'Expected a function named formatDate.' },
+      { name: 'Handles "short" format correctly', points: 14, fn: (code) => code.includes('short') && (code.includes('Intl') || code.includes('toLocal') || code.includes('Jan') || code.includes('month')), msg: 'Expected short format to return "Jan 5, 2024" style.' },
+      { name: 'Handles "long" format correctly', points: 13, fn: (code) => code.includes('long') && (code.includes('January') || code.includes('Intl') || code.includes('toLocal')), msg: 'Expected long format to return "5 January 2024" style.' },
+      { name: 'Handles "iso" format correctly', points: 13, fn: (code) => code.includes('iso') && (code.includes('toISOString') || code.includes('padStart') || code.includes('split')), msg: 'Expected iso format to return "YYYY-MM-DD" style.' },
+      { name: 'Returns "Invalid date" for bad input', points: 5, fn: (code) => code.includes('Invalid') || code.includes('isNaN') || code.includes('isValid'), msg: 'Expected "Invalid date" string for invalid input.' },
+    ],
+    preview: () => `
+      <style>body{font-family:sans-serif;padding:20px;background:#f0f2f5;} table{width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.1);}
+      th{background:#1a1a2e;color:white;padding:12px 16px;text-align:left;font-size:0.85em;} td{padding:12px 16px;border-bottom:1px solid #eee;font-size:0.9em;color:#333;}
+      .tag{display:inline-block;background:#e8ffe8;color:#1a6b1a;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:0.85em;}</style>
+      <table><thead><tr><th>Input</th><th>Format</th><th>Output</th></tr></thead>
+      <tbody>
+      <tr><td>2024-01-05</td><td><span class="tag">short</span></td><td>Jan 5, 2024</td></tr>
+      <tr><td>2024-01-05</td><td><span class="tag">long</span></td><td>5 January 2024</td></tr>
+      <tr><td>2024-01-05</td><td><span class="tag">iso</span></td><td>2024-01-05</td></tr>
+      <tr><td>not-a-date</td><td><span class="tag">short</span></td><td style="color:#e00">Invalid date</td></tr>
+      </tbody></table>`
+  },
+  {
+    id: 6, category: 'React Component',
+    name: 'Navigation Menu',
+    difficulty: 'hard', points: 50,
+    brief: `Build a <strong>responsive Navigation Menu</strong> component — the most critical component in any Sitecore XM Cloud project. It must handle both desktop and mobile states.`,
+    tasks: [
+      'Accept <code>links</code> prop: array of <code>{ label, href }</code> objects',
+      'Render a <code>&lt;nav&gt;</code> with a list of links',
+      'Include a <strong>hamburger toggle button</strong> for mobile (className <code>"menu-toggle"</code>)',
+      'Track <code>isOpen</code> state — add className <code>"open"</code> to nav when menu is open',
+      'Display a logo/brand with <code>brandName</code> prop',
+    ],
+    hint: 'useState for isOpen, toggle on button click. The "open" class on the nav allows CSS to show/hide the mobile menu. This is the exact pattern used in Sitecore JSS boilerplate.',
+    starter: `// Navigation Menu Component
+// Props: { brandName, links: [{ label, href }] }
+
+function NavigationMenu({ brandName, links }) {
+  // Add state for mobile menu open/close
+
+  return (
+    <nav className="">
+      {/* Brand/logo */}
+      {/* Links list */}
+      {/* Mobile hamburger button */}
+    </nav>
+  );
+}`,
+    tests: [
+      { name: 'Renders a <nav> element', points: 8, fn: (code) => code.includes('<nav'), msg: 'Expected a <nav> element as the root.' },
+      { name: 'Renders brandName prop', points: 8, fn: (code) => code.includes('brandName'), msg: 'Expected brandName to be rendered.' },
+      { name: 'Maps over links array', points: 10, fn: (code) => code.includes('links') && code.includes('.map') && code.includes('href'), msg: 'Expected links.map() rendering anchor tags with href.' },
+      { name: 'Uses useState for isOpen', points: 12, fn: (code) => code.includes('useState') && (code.includes('isOpen') || code.includes('open') || code.includes('Open')), msg: 'Expected useState tracking open/closed state.' },
+      { name: 'menu-toggle button present', points: 12, fn: (code) => code.includes('menu-toggle') || code.includes('hamburger') || code.includes('toggle'), msg: 'Expected a button with className "menu-toggle".' },
+    ],
+    preview: () => `
+      <style>body{margin:0;font-family:sans-serif;background:#f0f2f5;}
+      nav{background:#1a1a2e;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;}
+      .brand{color:#39d0c8;font-weight:700;font-size:1.1em;} ul{display:flex;list-style:none;gap:24px;margin:0;padding:0;}
+      a{color:#ccc;text-decoration:none;font-size:0.9em;transition:color 0.2s;} a:hover{color:white;}
+      .toggle{background:none;border:1px solid #555;color:white;padding:6px 10px;border-radius:4px;cursor:pointer;display:none;}
+      @media(max-width:600px){.toggle{display:block;} ul{display:none;} nav{flex-wrap:wrap;height:auto;padding:12px 24px;gap:10px;}}
+      </style>
+      <nav><span class="brand">MySitecore</span><ul><li><a href="#">Home</a></li><li><a href="#">Products</a></li><li><a href="#">About</a></li><li><a href="#">Contact</a></li></ul><button class="toggle">☰</button></nav>
+      <div style="padding:40px 24px;"><h2 style="color:#333;">Page Content</h2><p style="color:#666;">Navigation component renders above this content.</p></div>`
+  }
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let currentChallenge = null;
+let editor = null;
+let scores = {}; // { challengeId: points }
+
+// ─── INIT MONACO ─────────────────────────────────────────────────────────────
+require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+require(['vs/editor/editor.main'], function() {
+  monaco.editor.defineTheme('sc-dark', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      { token: 'comment', foreground: '6e7681', fontStyle: 'italic' },
+      { token: 'keyword', foreground: 'ff7b72' },
+      { token: 'string', foreground: 'a5d6ff' },
+      { token: 'number', foreground: '79c0ff' },
+    ],
+    colors: {
+      'editor.background': '#0d1117',
+      'editor.foreground': '#e6edf3',
+      'editorLineNumber.foreground': '#6e7681',
+      'editor.selectionBackground': '#264f78',
+      'editorCursor.foreground': '#39d0c8',
+    }
+  });
+
+  editor = monaco.editor.create(document.getElementById('monaco-container'), {
+    value: '// ← Select a challenge from the sidebar to begin',
+    language: 'javascript',
+    theme: 'sc-dark',
+    fontSize: 13,
+    fontFamily: "'Cascadia Code', 'Fira Code', Consolas, monospace",
+    fontLigatures: true,
+    minimap: { enabled: false },
+    lineNumbers: 'on',
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    tabSize: 2,
+    wordWrap: 'on',
+    padding: { top: 16 },
+  });
+});
+
+// ─── RENDER SIDEBAR ───────────────────────────────────────────────────────────
+function renderSidebar() {
+  const list = document.getElementById('challenge-list');
+  const cats = [...new Set(CHALLENGES.map(c => c.category))];
+  list.innerHTML = cats.map(cat => {
+    const items = CHALLENGES.filter(c => c.category === cat);
+    return `<div class="cat-header">${cat}</div>` + items.map(ch => {
+      const solved = scores[ch.id] !== undefined;
+      const active = currentChallenge && currentChallenge.id === ch.id ? ' active' : '';
+      const solvedCls = solved ? ' solved' : '';
+      const scorePill = solved ? `<span class="ch-score-pill">✓ ${scores[ch.id]}/${ch.points}</span>` : '';
+      return `
+        <div class="challenge-item${active}${solvedCls}" onclick="selectChallenge(${ch.id})">
+          <div class="ch-top">
+            <span class="ch-name">${ch.name}</span>
+            <div class="ch-badges">
+              <span class="badge badge-${ch.difficulty}">${ch.difficulty}</span>
+            </div>
+          </div>
+          <div class="ch-meta">${ch.points} pts${scorePill}</div>
+        </div>`;
+    }).join('');
+  }).join('');
+}
+
+// ─── SELECT CHALLENGE ─────────────────────────────────────────────────────────
+function selectChallenge(id) {
+  currentChallenge = CHALLENGES.find(c => c.id === id);
+  if (!editor) return;
+  editor.setValue(currentChallenge.starter);
+  document.getElementById('editor-title').innerHTML =
+    `<span class="badge badge-cat">${currentChallenge.category}</span> ${currentChallenge.name}`;
+  renderBrief();
+  renderSidebar();
+  switchPanel('brief', document.querySelector('.panel-tab'));
+  // clear test results
+  document.getElementById('panel-tests').innerHTML = `
+    <div class="empty-state"><div class="icon">🧪</div>
+    <p>Click <strong style="color:var(--cyan)">▶ Run Tests</strong> to evaluate your solution.</p></div>`;
+}
+
+// ─── RENDER BRIEF ─────────────────────────────────────────────────────────────
+function renderBrief() {
+  if (!currentChallenge) return;
+  const ch = currentChallenge;
+  document.getElementById('panel-brief').innerHTML = `
+    <div class="brief-section">
+      <div class="brief-label">Overview</div>
+      <div class="brief-text">${ch.brief}</div>
+    </div>
+    <div class="brief-section">
+      <div class="brief-label">Your Tasks</div>
+      <div class="brief-task">
+        <ul>${ch.tasks.map(t => `<li>${t}</li>`).join('')}</ul>
+      </div>
+    </div>
+    <div class="brief-section">
+      <div class="brief-label">Scoring</div>
+      <div class="brief-text"><strong>${ch.tests.length} test cases</strong> worth <strong>${ch.points} points total</strong> — each test has individual points shown in the Test Results tab.</div>
+    </div>
+    <div class="hint-box">💡 <strong>Hint:</strong> ${ch.hint}</div>`;
+}
+
+// ─── RUN TESTS ────────────────────────────────────────────────────────────────
+function runTests() {
+  if (!currentChallenge || !editor) {
+    alert('Please select a challenge first.');
+    return;
+  }
+  const code = editor.getValue();
+  const ch = currentChallenge;
+
+  // Switch to test results panel
+  switchPanel('tests', null);
+  document.querySelectorAll('.panel-tab').forEach((t, i) => {
+    t.classList.toggle('active', i === 1);
+  });
+
+  // Show running state
+  document.getElementById('panel-tests').innerHTML = `
+    <div class="run-status running">
+      <span class="status-icon">⏳</span>
+      <div class="status-text">
+        <div class="status-title">Running tests...</div>
+        <div class="status-sub">Evaluating your solution</div>
+      </div>
+    </div>`;
+
+  setTimeout(() => {
+    let totalEarned = 0;
+    let totalPossible = 0;
+    const results = ch.tests.map(test => {
+      totalPossible += test.points;
+      let passed = false;
+      try { passed = test.fn(code); } catch(e) {}
+      if (passed) totalEarned += test.points;
+      return { ...test, passed };
+    });
+
+    scores[ch.id] = totalEarned;
+    updateTotalScore();
+    renderSidebar();
+
+    const allPass = totalEarned === totalPossible;
+    const pct = Math.round((totalEarned / totalPossible) * 100);
+
+    document.getElementById('panel-tests').innerHTML = `
+      <div class="run-status ${allPass ? 'passed' : 'failed'}">
+        <span class="status-icon">${allPass ? '🎉' : '⚠️'}</span>
+        <div class="status-text">
+          <div class="status-title">${allPass ? 'All tests passed!' : `${results.filter(r=>r.passed).length}/${results.length} tests passed`}</div>
+          <div class="status-sub">${pct}% score · ${totalEarned}/${totalPossible} points earned</div>
+        </div>
+        <div class="score-circle ${allPass ? '' : 'fail'}">${pct}<small>%</small></div>
+      </div>
+      ${results.map((r, i) => `
+        <div class="test-case">
+          <div class="test-header" onclick="toggleTest(${i})">
+            <div class="test-dot ${r.passed ? 'dot-pass' : 'dot-fail'}"></div>
+            <span class="test-name">${r.passed ? '✓' : '✗'} ${r.name}</span>
+            <span class="test-pts">+${r.points}pts</span>
+          </div>
+          <div class="test-body" id="tb-${i}">
+            ${r.passed
+              ? `<span class="test-ok">✓ Passed — +${r.points} points awarded</span>`
+              : `<span class="test-error">✗ Failed: ${r.msg}</span>`}
+          </div>
+        </div>`).join('')}`;
+  }, 900);
+}
+
+function toggleTest(i) {
+  document.getElementById('tb-'+i).classList.toggle('open');
+}
+
+// ─── RESET CODE ───────────────────────────────────────────────────────────────
+function resetCode() {
+  if (!currentChallenge || !editor) return;
+  if (confirm('Reset to starter code? Your changes will be lost.')) {
+    editor.setValue(currentChallenge.starter);
+  }
+}
+
+// ─── PANEL SWITCHING ──────────────────────────────────────────────────────────
+function switchPanel(name, clickedTab) {
+  ['brief', 'tests', 'preview'].forEach(p => {
+    const el = document.getElementById('panel-' + p);
+    if (el) el.classList.add('hidden');
+  });
+  const target = document.getElementById('panel-' + name);
+  if (target) target.classList.remove('hidden');
+
+  if (clickedTab) {
+    document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+    clickedTab.classList.add('active');
+  }
+
+  if (name === 'preview' && currentChallenge) {
+    const html = currentChallenge.preview(editor ? editor.getValue() : '');
+    document.getElementById('preview-frame').srcdoc = html;
+  }
+}
+
+// Add onclick for preview tab specifically
+document.querySelectorAll('.panel-tab').forEach((tab, i) => {
+  const panels = ['brief', 'tests', 'preview'];
+  tab.onclick = function() { switchPanel(panels[i], this); };
+});
+
+// ─── TOTAL SCORE ─────────────────────────────────────────────────────────────
+function updateTotalScore() {
+  const total = Object.values(scores).reduce((a, b) => a + b, 0);
+  document.getElementById('total-score-val').textContent = total;
+  document.getElementById('progress-bar').style.width = (total / 300 * 100) + '%';
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+renderSidebar();
+</script>
+</body>
+</html>
